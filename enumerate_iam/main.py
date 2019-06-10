@@ -110,6 +110,7 @@ def get_client(access_key, secret_key, session_token, service_name, region):
 
     config = Config(connect_timeout=5,
                     read_timeout=5,
+                    max_attempts=30,
                     retries={'max_attempts': 1},
                     max_pool_connections=MAX_POOL_CONNECTIONS * 2)
 
