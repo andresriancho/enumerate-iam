@@ -1,7 +1,7 @@
 import re
 import os
 import json
-
+from enumerate_iam.check_version import *
 
 OUTPUT_FMT = 'BRUTEFORCE_TESTS = %s'
 OUTPUT_FILE = 'bruteforce_tests.py'
@@ -64,7 +64,13 @@ def is_dangerous(operation_name):
 def extract_operations(api_json):
     operations = []
 
-    for operation_name, operation_data in api_json['operations'].iteritems():
+    if PYTHON_VERSION == 2:
+        items = api_json['operations'].iteritems()
+    else:
+        # Python 3
+        items = api_json['operations'].items()
+
+    for operation_name, operation_data in items:
         operation_name = to_underscore(operation_name)
 
         if is_dangerous(operation_name):
@@ -103,7 +109,13 @@ def main():
         if not filename.endswith('.min.json'):
             continue
 
-        api_json_data = file(os.path.join(API_DEFINITIONS, filename)).read()
+        if PYTHON_VERSION == 2:
+            #print("Py 2")
+            api_json_data = file(os.path.join(API_DEFINITIONS, filename)).read()
+        else:
+            #print("Py 3")
+            api_json_data = open(os.path.join(API_DEFINITIONS, filename)).read()
+
         api_json = json.loads(api_json_data)
 
         service_name = extract_service_name(filename, api_json)
@@ -126,7 +138,12 @@ def main():
                                      indent=4,
                                      sort_keys=True)
 
-    file(OUTPUT_FILE, 'w').write(output)
+
+    if PYTHON_VERSION == 2:
+        file(OUTPUT_FILE, 'w').write(output)
+    else:
+        # Python 3
+        open(OUTPUT_FILE, 'w').write(output)
 
 
 if __name__ == '__main__':

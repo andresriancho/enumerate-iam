@@ -31,6 +31,8 @@ from enumerate_iam.utils.remove_metadata import remove_metadata
 from enumerate_iam.utils.json_utils import json_encoder
 from enumerate_iam.bruteforce_tests import BRUTEFORCE_TESTS
 
+from enumerate_iam.check_version import *
+
 
 MAX_THREADS = 25
 CLIENT_POOL = {}
@@ -87,7 +89,13 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
 
 
 def generate_args(access_key, secret_key, session_token, region):
-    service_names = BRUTEFORCE_TESTS.keys()
+
+    if PYTHON_VERSION == 2:
+        service_names = BRUTEFORCE_TESTS.keys()
+    else:
+        # Python 3
+        service_names = list(BRUTEFORCE_TESTS.keys())
+
     random.shuffle(service_names)
 
     for service_name in service_names:
