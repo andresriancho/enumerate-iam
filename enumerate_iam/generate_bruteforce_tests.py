@@ -2,7 +2,6 @@ import re
 import os
 import json
 
-
 OUTPUT_FMT = 'BRUTEFORCE_TESTS = %s'
 OUTPUT_FILE = 'bruteforce_tests.py'
 
@@ -64,7 +63,9 @@ def is_dangerous(operation_name):
 def extract_operations(api_json):
     operations = []
 
-    for operation_name, operation_data in api_json['operations'].iteritems():
+    items = api_json['operations'].items()
+
+    for operation_name, operation_data in items:
         operation_name = to_underscore(operation_name)
 
         if is_dangerous(operation_name):
@@ -103,7 +104,8 @@ def main():
         if not filename.endswith('.min.json'):
             continue
 
-        api_json_data = file(os.path.join(API_DEFINITIONS, filename)).read()
+        api_json_data = open(os.path.join(API_DEFINITIONS, filename)).read()
+
         api_json = json.loads(api_json_data)
 
         service_name = extract_service_name(filename, api_json)
@@ -126,7 +128,7 @@ def main():
                                      indent=4,
                                      sort_keys=True)
 
-    file(OUTPUT_FILE, 'w').write(output)
+    open(OUTPUT_FILE, 'w').write(output)
 
 
 if __name__ == '__main__':
