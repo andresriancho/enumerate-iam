@@ -70,7 +70,22 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
     pool = ThreadPool(MAX_THREADS)
     args_generator = generate_args(access_key, secret_key, session_token, region)
 
-    results = pool.map(check_one_permission, args_generator)
+    try:
+        results = pool.map(check_one_permission, args_generator)
+    except KeyboardInterrupt:
+        print('')
+
+        results = []
+
+        logger.info('Ctrl+C received, stopping all threads.')
+        logger.info('Hit Ctrl+C again to force exit.')
+
+        try:
+            pool.close()
+            pool.join()
+        except KeyboardInterrupt:
+            print('')
+            return output
 
     for thread_result in results:
         if thread_result is None:
