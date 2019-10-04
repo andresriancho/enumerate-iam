@@ -1,5 +1,3 @@
-[![asciicast](https://asciinema.org/a/EbzQ84nEkMAmFq9VgwmYQoDQU.svg)](https://asciinema.org/a/EbzQ84nEkMAmFq9VgwmYQoDQU)
-
 ## Enumerate IAM permissions
 
 Found a set of AWS credentials and have no idea which permissions it might have?
