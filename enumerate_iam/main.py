@@ -33,6 +33,7 @@ from enumerate_iam.bruteforce_tests import BRUTEFORCE_TESTS
 
 MAX_THREADS = 25
 CLIENT_POOL = {}
+STOP_SIGNAL = False
 
 
 def report_arn(candidate):
@@ -62,6 +63,7 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
     """
     Attempt to brute-force common describe calls.
     """
+    global STOP_SIGNAL
     output = dict()
 
     logger = logging.getLogger()
@@ -73,6 +75,7 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
     try:
         results = pool.map(check_one_permission, args_generator)
     except KeyboardInterrupt:
+        STOP_SIGNAL = True
         print('')
 
         results = []
@@ -85,6 +88,7 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
             pool.join()
         except KeyboardInterrupt:
             print('')
+            STOP_SIGNAL = True
             return output
 
     for thread_result in results:
@@ -152,6 +156,9 @@ def check_one_permission(arg_tuple):
     access_key, secret_key, session_token, region, service_name, operation_name = arg_tuple
     logger = logging.getLogger()
 
+    if STOP_SIGNAL:
+        return
+
     service_client = get_client(access_key, secret_key, session_token, service_name, region)
     if service_client is None:
         return
@@ -167,6 +174,8 @@ def check_one_permission(arg_tuple):
     logger.debug('Testing %s.%s() in region %s' % (service_name, operation_name, region))
 
     try:
+        if STOP_SIGNAL: 
+            return
         action_response = action_function()
     except (botocore.exceptions.ClientError,
             botocore.exceptions.EndpointConnectionError,
