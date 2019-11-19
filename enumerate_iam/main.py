@@ -19,6 +19,7 @@ Improvements:
 import re
 import json
 import logging
+import signal
 import boto3
 import botocore
 import random
@@ -69,11 +70,16 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
     logger = logging.getLogger()
     logger.info('Attempting common-service describe / list brute force.')
 
+    # Ignore SIGINT signals so that child processes inherit SIGINT handler
+    original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     pool = ThreadPool(MAX_THREADS)
+    signal.signal(signal.SIGINT, original_sigint_handler)
+
     args_generator = generate_args(access_key, secret_key, session_token, region)
 
     try:
-        results = pool.map(check_one_permission, args_generator)
+        results = pool.map_async(check_one_permission, args_generator)
+        results.get(600)
     except KeyboardInterrupt:
         STOP_SIGNAL = True
         print('')
