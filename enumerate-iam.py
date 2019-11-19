@@ -18,7 +18,8 @@ def main():
 
     if args.profile and (args.access_key or args.secret_key or args.session_token):
         sys.stderr.write('error: Profile and raw AWS credential options are mutually exclusive.\n')
-        sys.stderr.write('       Please specify either --profile or --access-key and --secret-key.\n')
+        sys.stderr.write('       Please specify either --profile or --access-key and --secret-key.\n\n')
+        parser.print_help()
         sys.exit(2)
 
     access_key = args.access_key
