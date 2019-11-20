@@ -33,7 +33,7 @@ from enumerate_iam.utils.remove_metadata import remove_metadata
 from enumerate_iam.utils.json_utils import json_encoder
 from enumerate_iam.bruteforce_tests import BRUTEFORCE_TESTS
 
-MAX_THREADS = 1
+MAX_THREADS = 25
 CLIENT_POOL = {}
 MANAGER = Manager()
 STOP_SIGNAL = MANAGER.Value('i', 0)
@@ -72,7 +72,6 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region, ti
     logger = logging.getLogger()
     logger.info('Attempting common-service describe / list brute force.')
 
-    # Ignore SIGINT signals so that child processes inherit SIGINT handler
     original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     pool = ThreadPool(MAX_THREADS)
     signal.signal(signal.SIGINT, original_sigint_handler)
@@ -184,9 +183,9 @@ def check_one_permission(arg_tuple):
 
     logger.debug('Testing %s.%s() in region %s' % (service_name, operation_name, region))
 
+    if stop_signal.value == 1:
+        return
     try:
-        if stop_signal.value == 1:
-            return
         action_response = action_function()
     except (botocore.exceptions.ClientError,
             botocore.exceptions.EndpointConnectionError,
@@ -325,14 +324,17 @@ def enumerate_role(iam_client, output):
         for policy in role_policies['AttachedPolicies']:
             logger.info('-- Policy "%s" (%s)', policy['PolicyName'], policy['PolicyArn'])
 
-            get_policy = iam.get_role_policy(PolicyName=policy['PolicyName'])
-            policy_version = iam_client.get_policy_version(PolicyArn=policy['PolicyArn'], VersionId=policy['DefaultVersionId'])
-            logger.debug('Role attached policy: {}'.format(policy['PolicyName'])) 
-            logger.debug('%s', json.dumps(policy_version, indent=4, default=json_encoder))
+            try:
+                get_policy = iam.get_role_policy(PolicyName=policy['PolicyName'])
+                policy_version = iam_client.get_policy_version(PolicyArn=policy['PolicyArn'], VersionId=policy['DefaultVersionId'])
+                logger.debug('Role attached policy: {}'.format(policy['PolicyName'])) 
+                logger.debug('%s', json.dumps(policy_version, indent=4, default=json_encoder))
 
-            key = 'iam.role_attached_policies'
-            if key not in output.keys(): output[key] = []
-            output[key].append(remove_metadata(policy_version))
+                key = 'iam.role_attached_policies'
+                if key not in output.keys(): output[key] = []
+                output[key].append(remove_metadata(policy_version))
+            except:
+                pass
 
     # Attempt to get inline policies for this user.
     try:
@@ -352,12 +354,15 @@ def enumerate_role(iam_client, output):
         for policy in role_policies['PolicyNames']:
             logger.info('-- Policy "%s"', policy)
 
-            get_policy = iam_client.get_user_policy(RoleName=role_name, PolicyName=policy)
-            logger.debug('Role inline policy:\n%s', json.dumps(get_policy['PolicyDocument'], indent=4, default=json_encoder))
+            try:
+                get_policy = iam_client.get_user_policy(RoleName=role_name, PolicyName=policy)
+                logger.debug('Role inline policy:\n%s', json.dumps(get_policy['PolicyDocument'], indent=4, default=json_encoder))
 
-            key = 'iam.role_inline_policies'
-            if key not in output.keys(): output[key] = []
-            output[key].append(remove_metadata(get_policy['PolicyDocument']))
+                key = 'iam.role_inline_policies'
+                if key not in output.keys(): output[key] = []
+                output[key].append(remove_metadata(get_policy['PolicyDocument']))
+            except:
+                pass
 
     return output
 
@@ -412,13 +417,16 @@ def enumerate_user(iam_client, output):
         for policy in user_policies['AttachedPolicies']:
             logger.info('-- Policy "%s" (%s)', policy['PolicyName'], policy['PolicyArn'])
 
-            get_policy = iam_client.get_policy(PolicyArn=policy['PolicyArn'])
-            policy_version = iam_client.get_policy_version(PolicyArn=policy['PolicyArn'], VersionId=get_policy['Policy']['DefaultVersionId'])
-            logger.debug('User attached policy:\n%s', json.dumps(policy_version['PolicyVersion'], indent=4, default=json_encoder))
+            try:
+                get_policy = iam_client.get_policy(PolicyArn=policy['PolicyArn'])
+                policy_version = iam_client.get_policy_version(PolicyArn=policy['PolicyArn'], VersionId=get_policy['Policy']['DefaultVersionId'])
+                logger.debug('User attached policy:\n%s', json.dumps(policy_version['PolicyVersion'], indent=4, default=json_encoder))
 
-            key = 'iam.user_attached_policies'
-            if key not in output.keys(): output[key] = []
-            output[key].append(remove_metadata(policy_version['PolicyVersion']))
+                key = 'iam.user_attached_policies'
+                if key not in output.keys(): output[key] = []
+                output[key].append(remove_metadata(policy_version['PolicyVersion']))
+            except:
+                pass
 
     # Attempt to get inline policies for this user.
     try:
@@ -438,12 +446,15 @@ def enumerate_user(iam_client, output):
         for policy in user_policies['PolicyNames']:
             logger.info('-- Policy "%s"', policy)
 
-            get_policy = iam_client.get_user_policy(UserName=user_name, PolicyName=policy)
-            logger.debug('User inline policy:\n%s', json.dumps(get_policy['PolicyDocument'], indent=4, default=json_encoder))
+            try:
+                get_policy = iam_client.get_user_policy(UserName=user_name, PolicyName=policy)
+                logger.debug('User inline policy:\n%s', json.dumps(get_policy['PolicyDocument'], indent=4, default=json_encoder))
 
-            key = 'iam.user_inline_policies'
-            if key not in output.keys(): output[key] = []
-            output[key].append(remove_metadata(get_policy['PolicyDocument']))
+                key = 'iam.user_inline_policies'
+                if key not in output.keys(): output[key] = []
+                output[key].append(remove_metadata(get_policy['PolicyDocument']))
+            except:
+                pass
 
     # Attempt to get the groups attached to this user.
     user_groups = dict()
@@ -481,12 +492,15 @@ def enumerate_user(iam_client, output):
             for policy in group_policy['PolicyNames']:
                 logger.info('---- Policy "%s"', policy)
 
-                get_policy = iam_client.get_group_policy(GroupName=group['GroupName'], PolicyName=policy)
-                logger.debug('Group inline policy:\n%s', json.dumps(get_policy['PolicyDocument'], indent=4, default=json_encoder))
+                try:
+                    get_policy = iam_client.get_group_policy(GroupName=group['GroupName'], PolicyName=policy)
+                    logger.debug('Group inline policy:\n%s', json.dumps(get_policy['PolicyDocument'], indent=4, default=json_encoder))
 
-                key = 'iam.group_inline_policies'
-                if key not in output.keys(): output[key] = []
-                output[key].append(remove_metadata(get_policy['PolicyDocument']))
+                    key = 'iam.group_inline_policies'
+                    if key not in output.keys(): output[key] = []
+                    output[key].append(remove_metadata(get_policy['PolicyDocument']))
+                except:
+                    pass
 
         except botocore.exceptions.ClientError as err:
             pass
