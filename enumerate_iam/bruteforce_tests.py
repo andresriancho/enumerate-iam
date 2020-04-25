@@ -1035,6 +1035,7 @@ BRUTEFORCE_TESTS = {
         "describe_inventory_deletions",
         "describe_maintenance_window_schedule",
         "describe_maintenance_windows",
+        "describe_parameters",
         "describe_patch_baselines",
         "describe_patch_groups",
         "get_default_patch_baseline",
