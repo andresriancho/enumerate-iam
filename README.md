@@ -74,7 +74,7 @@ finding all the existing permissions run:
 
 ```console
 cd enumerate_iam/
-git clone https://github.com/aws/aws-sdk-js.git
+git clone --depth=1 https://github.com/aws/aws-sdk-js.git
 python generate_bruteforce_tests.py
 rm -rf aws-sdk-js
 ```
