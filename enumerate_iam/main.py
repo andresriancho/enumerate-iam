@@ -232,7 +232,8 @@ def enumerate_using_iam(access_key, secret_key, session_token, region):
         'iam',
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
-        aws_session_token=session_token
+        aws_session_token=session_token,
+        verify=False
     )
 
     # Try for the kitchen sink.
