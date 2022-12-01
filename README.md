@@ -28,6 +28,8 @@ Now you do!
 The calls performed by this tool are all non-destructive (only get* and list*
 calls are performed).
 
+If you don't provide credentials through the CLI arguments, enumerate-iam will attempt to read them from your current environment (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`).
+
 ## Installation
 
 ```
