@@ -58,7 +58,7 @@ def report_arn(candidate):
     return None, None, None
 
 
-def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
+def enumerate_using_bruteforce(access_key, secret_key, session_token, region, endpoint_url):
     """
     Attempt to brute-force common describe calls.
     """
@@ -68,7 +68,7 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
     logger.info('Attempting common-service describe / list brute force.')
 
     pool = ThreadPool(MAX_THREADS)
-    args_generator = generate_args(access_key, secret_key, session_token, region)
+    args_generator = generate_args(access_key, secret_key, session_token, region, endpoint_url)
 
     try:
         results = pool.map(check_one_permission, args_generator)
@@ -86,6 +86,9 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
         except KeyboardInterrupt:
             print('')
             return output
+    except Exception as e:
+        logger.warn('Error occured: %s' % e)
+        results = []
 
     for thread_result in results:
         if thread_result is None:
@@ -100,7 +103,7 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
     return output
 
 
-def generate_args(access_key, secret_key, session_token, region):
+def generate_args(access_key, secret_key, session_token, region, endpoint_url):
 
     service_names = list(BRUTEFORCE_TESTS.keys())
 
@@ -111,10 +114,10 @@ def generate_args(access_key, secret_key, session_token, region):
         random.shuffle(actions)
 
         for action in actions:
-            yield access_key, secret_key, session_token, region, service_name, action
+            yield access_key, secret_key, session_token, region, endpoint_url, service_name, action
 
 
-def get_client(access_key, secret_key, session_token, service_name, region):
+def get_client(access_key, secret_key, session_token, service_name, region, endpoint_url):
     key = '%s-%s-%s-%s-%s' % (access_key, secret_key, session_token, service_name, region)
 
     client = CLIENT_POOL.get(key, None)
@@ -136,6 +139,7 @@ def get_client(access_key, secret_key, session_token, service_name, region):
             aws_secret_access_key=secret_key,
             aws_session_token=session_token,
             region_name=region,
+            endpoint_url=endpoint_url,
             verify=False,
             config=config,
         )
@@ -149,10 +153,10 @@ def get_client(access_key, secret_key, session_token, service_name, region):
 
 
 def check_one_permission(arg_tuple):
-    access_key, secret_key, session_token, region, service_name, operation_name = arg_tuple
+    access_key, secret_key, session_token, region, endpoint_url, service_name, operation_name = arg_tuple
     logger = logging.getLogger()
 
-    service_client = get_client(access_key, secret_key, session_token, service_name, region)
+    service_client = get_client(access_key, secret_key, session_token, service_name, region, endpoint_url)
     if service_client is None:
         return
 
@@ -207,7 +211,7 @@ def configure_logging():
     urllib3.disable_warnings(botocore.vendored.requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 
-def enumerate_iam(access_key, secret_key, session_token, region):
+def enumerate_iam(access_key, secret_key, session_token, region, endpoint_url):
     """IAM Account Enumerator.
 
     This code provides a mechanism to attempt to validate the permissions assigned
@@ -216,13 +220,13 @@ def enumerate_iam(access_key, secret_key, session_token, region):
     output = dict()
     configure_logging()
 
-    output['iam'] = enumerate_using_iam(access_key, secret_key, session_token, region)
-    output['bruteforce'] = enumerate_using_bruteforce(access_key, secret_key, session_token, region)
+    output['iam'] = enumerate_using_iam(access_key, secret_key, session_token, region, endpoint_url)
+    output['bruteforce'] = enumerate_using_bruteforce(access_key, secret_key, session_token, region, endpoint_url)
 
     return output
 
 
-def enumerate_using_iam(access_key, secret_key, session_token, region):
+def enumerate_using_iam(access_key, secret_key, session_token, region, endpoint_url):
     output = dict()
     logger = logging.getLogger()
 
@@ -232,7 +236,9 @@ def enumerate_using_iam(access_key, secret_key, session_token, region):
         'iam',
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
-        aws_session_token=session_token
+        aws_session_token=session_token,
+        region_name=region,
+        endpoint_url=endpoint_url
     )
 
     # Try for the kitchen sink.
