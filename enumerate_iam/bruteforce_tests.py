@@ -1,4 +1,8 @@
 BRUTEFORCE_TESTS = {
+    "account":[
+        "get_alternate_contact",
+        "get_contact_information"  
+    ],
     "a4b": [
         "get_conference_preference",
         "get_device",
@@ -78,6 +82,17 @@ BRUTEFORCE_TESTS = {
         "describe_job_definitions",
         "describe_job_queues",
         "list_jobs"
+    ],
+    "bedrock": [
+        "get_custom_model",
+        "get_foundation_model",
+        "get_model_customization_job",
+        "get_model_invocation_logging_configuration",
+        "get_provisioned_model_throughput",
+        "list_custom_models",
+        "list_foundation_models",
+        "list_model_customization_jobs",
+        "list_provisioned_model_throughputs"
     ],
     "chime": [
         "list_accounts"
@@ -278,6 +293,22 @@ BRUTEFORCE_TESTS = {
         "describe_replication_subnet_groups",
         "describe_replication_task_assessment_results",
         "describe_replication_tasks"
+    ],
+    "docdb":[
+        "describe_certificates",
+        "describe_db_cluster_parameter_groups",
+        "describe_db_cluster_parameters",
+        "describe_db_cluster_snapshot_attributes",
+        "describe_db_cluster_snapshots",
+        "describe_db_clusters",
+        "describe_db_engine_versions",
+        "describe_db_instances",
+        "describe_db_subnet_groups",
+        "describe_engine_default_cluster_parameters
+        "describe_event_categories",
+        "describe_event_subscriptions",
+        "describe_events",
+        "describe_global_clusters"
     ],
     "ds": [
         "describe_directories",
