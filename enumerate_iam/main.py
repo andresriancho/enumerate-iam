@@ -19,6 +19,8 @@ Improvements:
 import re
 import json
 import logging
+import sys
+
 import boto3
 import botocore
 import random
@@ -33,6 +35,10 @@ from enumerate_iam.bruteforce_tests import BRUTEFORCE_TESTS
 
 MAX_THREADS = 25
 CLIENT_POOL = {}
+
+# ANSI escape codes for clearing the line
+CLEAR_LINE = "\x1b[2K"  # Clears the entire line
+CURSOR_UP_ONE = "\x1b[A"  # Moves the cursor up one line
 
 
 def report_arn(candidate):
@@ -126,7 +132,7 @@ def get_client(access_key, secret_key, session_token, service_name, region):
 
     config = Config(connect_timeout=5,
                     read_timeout=5,
-                    retries={'max_attempts': 30},
+                    retries={'max_attempts': 3},
                     max_pool_connections=MAX_POOL_CONNECTIONS * 2)
 
     try:
@@ -156,6 +162,10 @@ def check_one_permission(arg_tuple):
     if service_client is None:
         return
 
+    # Create a string to display the service and operation names
+    display_string = f'Testing {service_name}.{operation_name}()'
+    print(display_string, end='\r')
+
     try:
         action_function = getattr(service_client, operation_name)
     except AttributeError:
@@ -164,14 +174,14 @@ def check_one_permission(arg_tuple):
         logger.error('Remove %s.%s action' % (service_name, operation_name))
         return
 
-    logger.debug('Testing %s.%s() in region %s' % (service_name, operation_name, region))
-
     try:
         action_response = action_function()
     except (botocore.exceptions.ClientError,
             botocore.exceptions.EndpointConnectionError,
             botocore.exceptions.ConnectTimeoutError,
-            botocore.exceptions.ReadTimeoutError):
+            botocore.exceptions.ReadTimeoutError,
+            botocore.exceptions.NoAuthTokenError):
+        print(end=CLEAR_LINE)
         return
     except botocore.exceptions.ParamValidationError:
         logger.error('Remove %s.%s action' % (service_name, operation_name))
