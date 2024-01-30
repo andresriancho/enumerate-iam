@@ -358,11 +358,8 @@ BRUTEFORCE_TESTS = {
         "list_repositories"
     ],
     "codedeploy": [
-        "batch_get_deployment_targets",
-        "get_deployment_target",
         "list_applications",
         "list_deployment_configs",
-        "list_deployment_targets",
         "list_deployments",
         "list_git_hub_account_token_names",
         "list_on_premises_instances"
