@@ -1,5 +1,6 @@
 #!/opt/homebrew/bin/python3
 import argparse
+import getpass
 
 from enumerate_iam.main import enumerate_iam
 
@@ -18,7 +19,7 @@ def main():
         args.access_key = input("Enter AWS access key: ")
 
     if args.secret_key is None:
-        args.secret_key = input("Enter AWS secret key: ")
+        args.secret_key = getpass.getpass("Enter AWS secret key: ")
 
     enumerate_iam(args.access_key,
                       args.secret_key,
