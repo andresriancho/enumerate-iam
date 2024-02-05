@@ -40,6 +40,21 @@ CLIENT_POOL = {}
 CLEAR_LINE = "\x1b[2K"  # Clears the entire line
 CURSOR_UP_ONE = "\x1b[A"  # Moves the cursor up one line
 
+# Hashtable mapping Access key prefixes to types
+ACCESS_KEY_PREFIXES = {
+    "ABIA": "AWS STS service bearer token",
+    "ACCA": "Context-specific credential",
+    "AGPA": "Group",
+    "AIDA": "IAM user",
+    "AIPA": "Amazon EC2 instance profile",
+    "AKIA": "Access key",
+    "ANPA": "Managed policy",
+    "ANVA": "Version in a managed policy",
+    "APKA": "Public key",
+    "AROA": "Role",
+    "ASCA": "Certificate",
+    "ASIA": "Temporary AWS STS key"
+}
 
 def report_arn(candidate):
     """
@@ -217,6 +232,21 @@ def configure_logging():
     urllib3.disable_warnings(botocore.vendored.requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 
+def get_key_type(access_key):
+    if not access_key:
+        return "Unknown"
+
+    # Extract the first four letters of the access key
+    prefix = access_key[:4]
+    # Look up the prefix in the hashtable
+    key_type = ACCESS_KEY_PREFIXES.get(prefix, "Unknown")
+
+    logger = logging.getLogger()
+    logger.info('Access key is a "%s"', key_type)
+
+    return key_type
+
+
 def enumerate_iam(access_key, secret_key, session_token, region):
     """IAM Account Enumerator.
 
@@ -226,6 +256,7 @@ def enumerate_iam(access_key, secret_key, session_token, region):
     output = dict()
     configure_logging()
 
+    output['type'] = get_key_type(access_key)
     output['iam'] = enumerate_using_iam(access_key, secret_key, session_token, region)
     output['bruteforce'] = enumerate_using_bruteforce(access_key, secret_key, session_token, region)
 
