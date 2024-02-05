@@ -16,6 +16,8 @@ Improvements:
     * Increased API call coverage
     * Export as a library
 """
+import base64
+import binascii
 import re
 import json
 import logging
@@ -55,6 +57,7 @@ ACCESS_KEY_PREFIXES = {
     "ASCA": "Certificate",
     "ASIA": "Temporary AWS STS key"
 }
+
 
 def report_arn(candidate):
     """
@@ -122,7 +125,6 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
 
 
 def generate_args(access_key, secret_key, session_token, region):
-
     service_names = list(BRUTEFORCE_TESTS.keys())
 
     random.shuffle(service_names)
@@ -247,6 +249,22 @@ def get_key_type(access_key):
     return key_type
 
 
+def get_account_id(access_key):
+    postfix = access_key[4:]  # remove KeyID prefix
+    x = base64.b32decode(postfix)  # base32 decode
+    y = x[0:6]
+
+    z = int.from_bytes(y, byteorder='big', signed=False)
+    mask = int.from_bytes(binascii.unhexlify(b'7fffffffff80'), byteorder='big', signed=False)
+
+    account_id = (z & mask) >> 7
+
+    logger = logging.getLogger()
+    logger.info('AWS account ID: "%s"', account_id)
+
+    return account_id
+
+
 def enumerate_iam(access_key, secret_key, session_token, region):
     """IAM Account Enumerator.
 
@@ -257,6 +275,7 @@ def enumerate_iam(access_key, secret_key, session_token, region):
     configure_logging()
 
     output['type'] = get_key_type(access_key)
+    output['account_id'] = get_account_id(access_key)
     output['iam'] = enumerate_using_iam(access_key, secret_key, session_token, region)
     output['bruteforce'] = enumerate_using_bruteforce(access_key, secret_key, session_token, region)
 
@@ -473,4 +492,3 @@ def enumerate_user(iam_client, output):
             pass
 
     return output
-
