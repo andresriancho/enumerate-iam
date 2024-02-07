@@ -16,9 +16,13 @@ Improvements:
     * Increased API call coverage
     * Export as a library
 """
+import base64
+import binascii
 import re
 import json
 import logging
+import sys
+
 import boto3
 import botocore
 import random
@@ -33,6 +37,26 @@ from enumerate_iam.bruteforce_tests import BRUTEFORCE_TESTS
 
 MAX_THREADS = 25
 CLIENT_POOL = {}
+
+# ANSI escape codes for clearing the line
+CLEAR_LINE = "\x1b[2K"  # Clears the entire line
+CURSOR_UP_ONE = "\x1b[A"  # Moves the cursor up one line
+
+# Hashtable mapping Access key prefixes to types
+ACCESS_KEY_PREFIXES = {
+    "ABIA": "AWS STS service bearer token",
+    "ACCA": "Context-specific credential",
+    "AGPA": "Group",
+    "AIDA": "IAM user",
+    "AIPA": "Amazon EC2 instance profile",
+    "AKIA": "Access key",
+    "ANPA": "Managed policy",
+    "ANVA": "Version in a managed policy",
+    "APKA": "Public key",
+    "AROA": "Role",
+    "ASCA": "Certificate",
+    "ASIA": "Temporary AWS STS key"
+}
 
 
 def report_arn(candidate):
@@ -101,7 +125,6 @@ def enumerate_using_bruteforce(access_key, secret_key, session_token, region):
 
 
 def generate_args(access_key, secret_key, session_token, region):
-
     service_names = list(BRUTEFORCE_TESTS.keys())
 
     random.shuffle(service_names)
@@ -126,7 +149,7 @@ def get_client(access_key, secret_key, session_token, service_name, region):
 
     config = Config(connect_timeout=5,
                     read_timeout=5,
-                    retries={'max_attempts': 30},
+                    retries={'max_attempts': 3},
                     max_pool_connections=MAX_POOL_CONNECTIONS * 2)
 
     try:
@@ -156,6 +179,10 @@ def check_one_permission(arg_tuple):
     if service_client is None:
         return
 
+    # Create a string to display the service and operation names
+    display_string = f'Testing {service_name}.{operation_name}()'
+    print(display_string, end='\r')
+
     try:
         action_function = getattr(service_client, operation_name)
     except AttributeError:
@@ -164,14 +191,14 @@ def check_one_permission(arg_tuple):
         logger.error('Remove %s.%s action' % (service_name, operation_name))
         return
 
-    logger.debug('Testing %s.%s() in region %s' % (service_name, operation_name, region))
-
     try:
         action_response = action_function()
     except (botocore.exceptions.ClientError,
             botocore.exceptions.EndpointConnectionError,
             botocore.exceptions.ConnectTimeoutError,
-            botocore.exceptions.ReadTimeoutError):
+            botocore.exceptions.ReadTimeoutError,
+            botocore.exceptions.NoAuthTokenError):
+        print(end=CLEAR_LINE)
         return
     except botocore.exceptions.ParamValidationError:
         logger.error('Remove %s.%s action' % (service_name, operation_name))
@@ -207,6 +234,37 @@ def configure_logging():
     urllib3.disable_warnings(botocore.vendored.requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 
+def get_key_type(access_key):
+    if not access_key:
+        return "Unknown"
+
+    # Extract the first four letters of the access key
+    prefix = access_key[:4]
+    # Look up the prefix in the hashtable
+    key_type = ACCESS_KEY_PREFIXES.get(prefix, "Unknown")
+
+    logger = logging.getLogger()
+    logger.info('Access key is a "%s"', key_type)
+
+    return key_type
+
+
+def get_account_id(access_key):
+    postfix = access_key[4:]  # remove KeyID prefix
+    x = base64.b32decode(postfix)  # base32 decode
+    y = x[0:6]
+
+    z = int.from_bytes(y, byteorder='big', signed=False)
+    mask = int.from_bytes(binascii.unhexlify(b'7fffffffff80'), byteorder='big', signed=False)
+
+    account_id = (z & mask) >> 7
+
+    logger = logging.getLogger()
+    logger.info('AWS account ID: "%s"', account_id)
+
+    return account_id
+
+
 def enumerate_iam(access_key, secret_key, session_token, region):
     """IAM Account Enumerator.
 
@@ -216,6 +274,8 @@ def enumerate_iam(access_key, secret_key, session_token, region):
     output = dict()
     configure_logging()
 
+    output['type'] = get_key_type(access_key)
+    output['account_id'] = get_account_id(access_key)
     output['iam'] = enumerate_using_iam(access_key, secret_key, session_token, region)
     output['bruteforce'] = enumerate_using_bruteforce(access_key, secret_key, session_token, region)
 
@@ -432,4 +492,3 @@ def enumerate_user(iam_client, output):
             pass
 
     return output
-
